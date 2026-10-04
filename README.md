@@ -36,7 +36,7 @@ jadi website bisa diakses kapan saja tanpa PC menyala (saat deploy hosting).
 2. Buka file `.env` di root project (sudah dibuatkan, **tidak ikut ke GitHub**),
    isi 5 nilainya:
    - `DB_HOST` → host pooler (`...pooler.supabase.com`)
-   - `DB_PORT` → `6543` (pooler, paling cocok untuk PHP)
+    - `DB_PORT` → `5432` (mode session pooler)
    - `DB_NAME` → `postgres`
    - `DB_USER` → `postgres.xxxxx`
    - `DB_PASSWORD` → database password langkah 1 (bukan placeholder)

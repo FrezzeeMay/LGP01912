@@ -28,19 +28,25 @@ jadi website bisa diakses kapan saja tanpa PC menyala (saat deploy hosting).
 3. New query lagi → tempel `database/supabase_seed.sql` → **Run**.
 4. Cek di **Table Editor**: tabel `users` harus berisi 4 akun.
 
-## 3. Sambungkan PHP ke Supabase
+## 3. Sambungkan PHP ke Supabase (via `.env`, tanpa password di source code)
 
 1. Dashboard → **Settings → Database** → bagian **Connection string** →
    pilih **URI**, salin. Bentuknya:
    `postgresql://postgres.xxxxx:PASSWORD@aws-0-...pooler.supabase.com:6543/postgres`
-2. Buka `config/database.php`, isi 5 nilai sesuai string itu:
-   - `$PG_HOST` → host pooler (`...pooler.supabase.com`)
-   - `$PG_PORT` → `6543` (pooler, paling cocok untuk PHP)
-   - `$PG_DB` → `postgres`
-   - `$PG_USER` → `postgres.xxxxx`
-   - `$PG_PASS` → database password langkah 1
-3. WAJIB pakai port **6543 (pooler/Supavisor)** untuk PHP di XAMPP —
-   port 5432 (direct) sering ditolak dari koneksi banyak.
+2. Buka file `.env` di root project (sudah dibuatkan, **tidak ikut ke GitHub**),
+   isi 5 nilainya:
+   - `DB_HOST` → host pooler (`...pooler.supabase.com`)
+   - `DB_PORT` → `6543` (pooler, paling cocok untuk PHP)
+   - `DB_NAME` → `postgres`
+   - `DB_USER` → `postgres.xxxxx`
+   - `DB_PASSWORD` → database password langkah 1 (bukan placeholder)
+3. Kalau `.env` belum diisi / salah, website menampilkan pesan jelas
+   ("Database belum dikonfigurasi" + nama key yang kurang) —
+   bukan error mentah.
+4. Di hosting (Render/Railway), isi key yang **sama persis**
+   (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`)
+   sebagai Environment Variable — file `.env` tidak perlu di-upload.
+5. Contoh format selalu tersedia di `.env.example` (yang ini aman di-commit).
 
 ## 4. Jalankan website lokal
 

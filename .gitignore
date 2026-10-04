@@ -3,8 +3,10 @@
 uploads/shirts/*
 !uploads/shirts/.gitkeep
 # File rahasia / lokal
-config/*.local.php
 .env
+.env.*
+!.env.example
+config/*.local.php
 *.log
 # Sampah OS & editor
 Thumbs.db

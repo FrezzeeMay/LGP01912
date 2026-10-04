@@ -7,14 +7,15 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     # Isi value-nya di dashboard Render (Environment), JANGAN tulis password di sini.
+    # Nama key mengikuti .env.example (DB_*).
     envVars:
-      - key: SUPABASE_DB_HOST
+      - key: DB_HOST
         value: db.xxxxx.supabase.co
-      - key: SUPABASE_DB_PORT
+      - key: DB_PORT
         value: 6543
-      - key: SUPABASE_DB_NAME
+      - key: DB_NAME
         value: postgres
-      - key: SUPABASE_DB_USER
+      - key: DB_USER
         value: postgres.xxxxx
-      - key: SUPABASE_DB_PASS
+      - key: DB_PASSWORD
         sync: false

@@ -1,26 +1,41 @@
 <?php
 // config/database.php — Koneksi PDO ke SUPABASE Postgres (online 24 jam).
+// Kredensial TIDAK ada di file ini. Semua dibaca dari file `.env` di root
+// project (format KEY=VALUE) atau dari environment variable hosting.
 // Cara pakai: require_once __DIR__ . '/database.php'; lalu gunakan $pdo.
-//
-// LANGKAH 1 — Ambil data koneksi dari Supabase Dashboard:
-//   Buka https://supabase.com/dashboard → project kamu → Settings → Database.
-//   Bagian "Connection string" → pilih mode "URI", salin isinya. Contoh:
-//     postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
-//   Pecah jadi 5 nilai di bawah (HOST, PORT 6543 pooler, DB postgres, USER postgres.xxxxx, PASS).
-//
-// LANGKAH 2 — Aktifkan driver Postgres di XAMPP (sekali saja):
-//   Buka C:\xampp\php\php.ini sebagai Administrator, hapus titik-koma pada:
-//     extension=pdo_pgsql
-//   Simpan, lalu Restart Apache. Cek: php -m | findstr pgsql
-//
-// Alternatif tanpa edit file: isi via environment variable
-//   SUPABASE_DB_HOST / _PORT / _NAME / _USER / _PASS (lebih aman untuk hosting).
 
-$PG_HOST = getenv('SUPABASE_DB_HOST') ?: 'db.xxxxx.supabase.co';            // <-- GANTI: host pooler
-$PG_PORT = getenv('SUPABASE_DB_PORT') ?: '6543';                            // 6543 = pooler (cocok untuk PHP), 5432 = direct
-$PG_DB   = getenv('SUPABASE_DB_NAME') ?: 'postgres';
-$PG_USER = getenv('SUPABASE_DB_USER') ?: 'postgres.xxxxx';                  // <-- GANTI: user pooler
-$PG_PASS = getenv('SUPABASE_DB_PASS') ?: 'ISI-DATABASE-PASSWORD-DISINI';    // <-- GANTI: database password
+// --- 1. Muat .env (tanpa library tambahan; env sistem hosting menang) ---
+require_once __DIR__ . '/env.php';
+load_env(dirname(__DIR__) . '/.env');
+
+// --- 2. Baca kredensial (DB_* utama, SUPABASE_DB_* sebagai fallback lama) ---
+function env2(string $a, string $b, $default = null) {
+    $v = getenv($a);
+    if ($v !== false && $v !== '') return $v;
+    $v = getenv($b);
+    if ($v !== false && $v !== '') return $v;
+    return $default;
+}
+
+$PG_HOST = env2('DB_HOST', 'SUPABASE_DB_HOST');
+$PG_PORT = env2('DB_PORT', 'SUPABASE_DB_PORT', '6543');
+$PG_DB   = env2('DB_NAME', 'SUPABASE_DB_NAME', 'postgres');
+$PG_USER = env2('DB_USER', 'SUPABASE_DB_USER');
+$PG_PASS = env2('DB_PASSWORD', 'SUPABASE_DB_PASS');
+
+// --- 3. Validasi: tolak jalan kalau kredensial belum diisi ---
+$missing = [];
+foreach (['DB_HOST' => $PG_HOST, 'DB_USER' => $PG_USER, 'DB_PASSWORD' => $PG_PASS] as $k => $v) {
+    if (!$v || str_contains((string)$v, 'xxxx') || $v === 'password_supabase_kamu') $missing[] = $k;
+}
+if ($missing) {
+    http_response_code(500);
+    die(
+        '<h2>Kredensial database belum diisi</h2>' .
+        '<p>Isi file <b>.env</b> di root project (lihat <b>.env.example</b>). Belum diisi: <b>' .
+        htmlspecialchars(implode(', ', $missing)) . '</b></p>'
+    );
+}
 
 $dsn = "pgsql:host={$PG_HOST};port={$PG_PORT};dbname={$PG_DB};sslmode=require";
 
@@ -42,7 +57,7 @@ try {
     http_response_code(500);
     die(
         '<h2>Koneksi Supabase gagal</h2>' .
-        '<p>Periksa isi <b>config/database.php</b> (HOST/USER/PASSWORD) dan pastikan tabel sudah dibuat via SQL Editor dari <b>database/supabase_schema.sql</b> + <b>database/supabase_seed.sql</b>.</p>' .
+        '<p>Periksa isi <b>.env</b> (HOST/USER/PASSWORD) dan pastikan tabel sudah dibuat via SQL Editor dari <b>database/supabase_schema.sql</b> + <b>database/supabase_seed.sql</b>.</p>' .
         '<p>Detail teknis (sembunyikan di production): ' . htmlspecialchars($e->getMessage()) . '</p>'
     );
 }

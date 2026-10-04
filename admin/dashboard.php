@@ -1,8 +1,10 @@
 <?php
 // admin/dashboard.php — ringkasan statistik + aktivitas terbaru.
+// PUBLIK: bisa dibuka tanpa login (hanya melihat). Tombol tulis hanya untuk admin.
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../config/database.php';
-$user = require_role(['admin', 'super_admin', 'user']);
+$user = current_user();
+$canWrite = $user && can_write($user);
 $base = '..';
 $pageTitle = 'Dashboard';
 $pageSub = 'Ringkasan kas kelas & baju gabungan — semua angka dihitung otomatis dari database.';
@@ -41,7 +43,7 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="panel">
   <div class="panel-head"><h2>Pembayaran Terakhir</h2><span class="spacer"></span>
-    <a class="btn btn-primary btn-sm" href="payments.php">+ Tambah Pembayaran</a>
+    <?php if ($canWrite): ?><a class="btn btn-primary btn-sm" href="payments.php">+ Tambah Pembayaran</a><?php endif; ?>
     <a class="btn btn-ghost btn-sm" href="payments.php">Lihat Semua</a></div>
   <div class="table-wrap"><table class="grid">
     <thead><tr><th>Nama</th><th>Nominal</th><th>Tanggal</th><th>Dimasukkan Oleh</th></tr></thead>
@@ -55,6 +57,7 @@ include __DIR__ . '/../includes/header.php';
   </table></div>
 </div>
 
+<?php if ($user && can_write($user)): ?>
 <div class="panel">
   <div class="panel-head"><h2>Aktivitas Admin Terakhir</h2><span class="spacer"></span>
     <a class="btn btn-ghost btn-sm" href="activity.php">Lihat Semua</a></div>
@@ -69,5 +72,6 @@ include __DIR__ . '/../includes/header.php';
     </tbody>
   </table></div>
 </div>
+<?php endif; ?>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

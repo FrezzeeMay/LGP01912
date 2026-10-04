@@ -26,7 +26,7 @@ $flashes = flash_get();
   <div class="scrim" id="scrim"></div>
 
   <aside class="sidebar" id="sidebar">
-    <a class="brand" href="<?= e($base) ?><?= $user ? 'admin/dashboard.php' : 'login.php' ?>">
+    <a class="brand" href="<?= e($base) ?>admin/dashboard.php">
       <span class="brand-mark">K</span>
       <span class="brand-text"><strong>KasKita</strong><small>Sistem Kas &amp; Pembuatan Baju</small></span>
     </a>
@@ -61,6 +61,17 @@ $flashes = flash_get();
         <small><?= e(role_label($user['role'] ?? '')) ?> · <?= e($user['username'] ?? '') ?></small></div>
       <a class="btn btn-ghost btn-sm" href="<?= e($base) ?>logout.php">Keluar</a>
     </div>
+    <?php else: ?>
+    <nav class="side-nav">
+      <a href="<?= e($base) ?>admin/dashboard.php" class="<?= ($active ?? '') === 'dashboard' ? 'on' : '' ?>">Dashboard</a>
+      <a href="<?= e($base) ?>admin/payments.php" class="<?= ($active ?? '') === 'payments' ? 'on' : '' ?>">Kas &amp; Pembayaran</a>
+      <a href="<?= e($base) ?>admin/participants.php" class="<?= ($active ?? '') === 'participants' ? 'on' : '' ?>">Peserta</a>
+      <a href="<?= e($base) ?>admin/shirts.php" class="<?= ($active ?? '') === 'shirts' ? 'on' : '' ?>">Baju Gabungan</a>
+    </nav>
+    <div class="side-user">
+      <div class="who"><strong>Mode Lihat</strong><small>Tamu — tanpa login</small></div>
+      <a class="btn btn-primary btn-sm" href="<?= e($base) ?>login.php">Masuk</a>
+    </div>
     <?php endif; ?>
   </aside>
 
@@ -74,6 +85,10 @@ $flashes = flash_get();
       <div class="topbar-meta">
         <span class="role-badge <?= e($user['role'] ?? 'admin') ?>"><?= e(role_label($user['role'] ?? 'admin')) ?></span>
         <span class="clock" id="clock"></span>
+      </div>
+      <?php else: ?>
+      <div class="topbar-meta">
+        <a class="btn btn-primary btn-sm" href="<?= e($base) ?>login.php">Masuk Admin</a>
       </div>
       <?php endif; ?>
     </header>

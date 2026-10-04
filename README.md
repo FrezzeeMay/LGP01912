@@ -84,10 +84,13 @@ jadi website bisa diakses kapan saja tanpa PC menyala (saat deploy hosting).
 - **Super Admin**: semua akses admin + CRUD peserta, kelola project &
   target baju, kelola akun (bisa buat akun role apa pun), lihat seluruh
   aktivitas + siapa mengubah apa.
-- **User**: login, **hanya melihat** (dashboard, tabel kas + riwayat,
-  peserta, baju + progress). Semua tombol tulis disembunyikan DAN
+- **Tamu (tanpa login)**: dashboard, tabel kas + riwayat, peserta, dan baju
+  + progress **bisa dilihat siapa saja tanpa login**. Tidak ada tombol tulis
+  untuk tamu, dan semua request tulis tanpa session admin ditolak backend.
+- **User** (akun viewer, opsional): sama seperti tamu — hanya melihat.
+  Akun ini tidak wajib dipakai karena halaman data sudah publik.
+  Menu Aktivitas & Kelola Admin tidak tampil untuk tamu/user; request tulis
   ditolak di backend (`can_write()` / `require_write()` + 403 di API).
-  Menu Aktivitas & Kelola Admin tidak tampil untuk role ini.
 
 ## 7. Struktur database (Supabase Postgres)
 

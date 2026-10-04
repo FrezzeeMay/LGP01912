@@ -1,10 +1,10 @@
 <?php
 // admin/payments.php — Tabel utama kas + tambah/edit/hapus + riwayat modal + search/filter.
-// Role: admin & super_admin boleh tambah/edit/hapus (tercatat created_by/updated_by + activity_logs).
+// PUBLIK untuk melihat (tanpa login). Menulis wajib login admin/super_admin.
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../config/database.php';
-$user = require_role(['admin', 'super_admin', 'user']);
-$canWrite = can_write($user);
+$user = current_user();
+$canWrite = $user && can_write($user);
 
 // ---------- PROSES POST (tambah / edit / hapus) ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -1,9 +1,9 @@
 <?php
-// admin/participants.php — CRUD peserta. Lihat: semua role. Tulis: super_admin saja.
+// admin/participants.php — PUBLIK untuk melihat. Tulis: super_admin saja.
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../config/database.php';
-$user = require_role(['admin', 'super_admin', 'user']);
-$isSuper = ($user['role'] === 'super_admin');
+$user = current_user();
+$isSuper = $user && ($user['role'] ?? '') === 'super_admin';
 $q = trim($_GET['q'] ?? '');
 $SIZES = ['XS','S','M','L','XL','XXL','XXXL'];
 

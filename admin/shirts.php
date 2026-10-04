@@ -1,10 +1,11 @@
 <?php
 // admin/shirts.php — Project baju gabungan: foto, target otomatis, progress, ukuran, status bayar.
+// PUBLIK untuk melihat (tanpa login). Menulis wajib login admin/super_admin.
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../config/database.php';
-$user = require_role(['admin', 'super_admin', 'user']);
-$isSuper = ($user['role'] === 'super_admin');
-$canWrite = can_write($user); // role 'user' hanya melihat
+$user = current_user();
+$isSuper = $user && ($user['role'] ?? '') === 'super_admin';
+$canWrite = $user && can_write($user); // tamu & role 'user' hanya melihat
 $SIZES = ['XS','S','M','L','XL','XXL','XXXL'];
 $UPLOAD_DIR = __DIR__ . '/../uploads/shirts/';
 $ALLOWED_EXT = ['jpg','jpeg','png','webp'];

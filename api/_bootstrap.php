@@ -11,6 +11,7 @@ function jres($ok, $msg, $data = null, $code = 200) {
 }
 $u = current_user();
 if (!$u) jres(false, 'Belum login.', null, 401);
+if (!empty($u['must_change_password'])) jres(false, 'Wajib ganti password dulu via halaman Ganti Password.', null, 403);
 if (!in_array($u['role'] ?? '', ['admin', 'super_admin', 'user'], true)) jres(false, 'Akses ditolak.', null, 403);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') jres(false, 'Metode harus POST.', null, 405);
 $in = $_POST + (json_decode(file_get_contents('php://input'), true) ?? []);

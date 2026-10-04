@@ -2,11 +2,13 @@
 -- KasKita — database/supabase_seed.sql  (PostgreSQL / Supabase)
 -- Cara pakai: SQL Editor → New query → tempel isi file → Run.
 --
--- Akun (password sudah di-hash dengan password_hash):
---   Alpi        / alpi019@gmail.com    / LGP019      (admin)
---   Naufal      / naufal019@gmail.com  / LGP019      (admin)
---   Super Admin / Rayhan019@gmai.com  / Apalah019   (super_admin)
---   Viewer      / viewer@kaskita.local / Viewer123! (user, lihat saja)
+-- Akun awal (password acak-kuat, hanya hash yang disimpan di sini):
+--   Alpi        / alpi019@gmail.com    (admin)
+--   Naufal      / naufal019@gmail.com  (admin)
+--   Super Admin / Rayhan019@gmai.com   (super_admin)
+--   Viewer      / viewer@kaskita.local (user, lihat saja)
+-- Password awal TIDAK ditulis di file mana pun — catat dari pemilik repo,
+-- lalu WAJIB diganti saat login pertama (dipaksa oleh sistem).
 -- ============================================================
 
 TRUNCATE TABLE activity_logs, shirt_participants, shirt_projects,
@@ -14,11 +16,11 @@ TRUNCATE TABLE activity_logs, shirt_participants, shirt_projects,
 RESTART IDENTITY CASCADE;
 
 -- ---------- users ----------
-INSERT INTO users (username, email, password, display_name, role) VALUES
-('alpi',       'alpi019@gmail.com',    '$2y$10$SvZmVqqTpYykdp6OJrqgKO/n20MNr9hQ/yD3wcq3yioQQU4NqoTWS', 'Alpi',        'admin'),
-('naufal',     'naufal019@gmail.com',  '$2y$10$SvZmVqqTpYykdp6OJrqgKO/n20MNr9hQ/yD3wcq3yioQQU4NqoTWS', 'Naufal',      'admin'),
-('superadmin', 'Rayhan019@gmai.com',   '$2y$10$YokCCtYX0Tio3FpbKw2XKupmePeERIfLq4/wY0dbcsiDU23ClvDa2', 'Super Admin', 'super_admin'),
-('viewer',     'viewer@kaskita.local', '$2y$10$v/qwVlui8vVqek8XnqM.KObfB.a1xEbdho6wUbkT.qLKhhGNaWW8W', 'Viewer',      'user');
+INSERT INTO users (username, email, password, display_name, role, must_change_password) VALUES
+('alpi',       'alpi019@gmail.com',    '$2y$10$JdIfWYvYDkx7nIxLPyJWPOLgufAKmHCLes4jIsTcdTljDwgxLCHZq', 'Alpi',        'admin',       TRUE),
+('naufal',     'naufal019@gmail.com',  '$2y$10$rsN5dX4oKQPDXH7IELnSRu2VdAHxmpqvkEOnzC7NZ/zvVYB9eIh6y', 'Naufal',      'admin',       TRUE),
+('superadmin', 'Rayhan019@gmai.com',   '$2y$10$IZ.XyMqyxwiI5vQIqVi11eBMshTheH.LbX7ehEvCyR7BoLL8VxjKG', 'Super Admin', 'super_admin', TRUE),
+('viewer',     'viewer@kaskita.local', '$2y$10$xXaNtMY1aFLctlu6qNKZEOZpiobTAxJoRjhelW.jf1DNsbpDEOKVa', 'Viewer',      'user',        TRUE);
 
 -- ---------- participants (10 contoh) ----------
 INSERT INTO participants (name, status, shirt_size) VALUES

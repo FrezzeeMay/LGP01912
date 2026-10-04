@@ -21,13 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else {
             try {
                 if ($act === 'create') {
-                    $pdo->prepare('INSERT INTO users (username,email,password,display_name,role) VALUES (?,?,?,?,?)')
+                    $pdo->prepare('INSERT INTO users (username,email,password,display_name,role,must_change_password) VALUES (?,?,?,?,?,TRUE)')
                         ->execute([$username, $email, password_hash($pass, PASSWORD_DEFAULT), $dname, $role]);
                     log_activity($pdo, (int)$user['id'], 'tambah_admin', "Menambahkan akun {$username} ({$role})");
-                    flash_set('success', "Akun {$username} dibuat.");
+                    flash_set('success', "Akun {$username} dibuat. Minta pemiliknya ganti password saat login pertama (dipaksa sistem).");
                 } else {
                     $id = (int)($_POST['id'] ?? 0);
-                    if ($pass !== '') $pdo->prepare('UPDATE users SET username=?,email=?,password=?,display_name=?,role=? WHERE id=?')
+                    // Jika admin me-reset password orang lain, paksa ganti lagi saat login berikut.
+                    if ($pass !== '') $pdo->prepare('UPDATE users SET username=?,email=?,password=?,display_name=?,role=?,must_change_password=TRUE WHERE id=?')
                         ->execute([$username,$email,password_hash($pass,PASSWORD_DEFAULT),$dname,$role,$id]);
                     else $pdo->prepare('UPDATE users SET username=?,email=?,display_name=?,role=? WHERE id=?')
                         ->execute([$username,$email,$dname,$role,$id]);

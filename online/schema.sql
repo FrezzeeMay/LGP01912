@@ -175,10 +175,11 @@ where sp.name = 'Baju Angkatan 2026'
 on conflict (project_id, participant_id) do nothing;
 
 -- ============================================================
--- AKUN — jalankan SETELAH membuat 3 user di Authentication:
---   alpi019@gmail.com    / LGP019      → Admin A
---   naufal019@gmail.com  / LGP019      → Admin B
---   Rayhan019@gmail.com  / Apalah019   → Super Admin
+-- AKUN — jalankan SETELAH membuat 3 user di Authentication
+-- (dengan password kuat masing-masing — tidak ditulis di sini):
+--   alpi019@gmail.com    → Admin A
+--   naufal019@gmail.com  → Admin B
+--   Rayhan019@gmail.com  → Super Admin
 -- ============================================================
 insert into public.profiles (id, email, display_name, role)
 select id, 'alpi019@gmail.com', 'Admin A', 'admin' from auth.users where email = 'alpi019@gmail.com'

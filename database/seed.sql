@@ -1,9 +1,7 @@
 -- ============================================================
--- KasKita — database/seed.sql
--- Akun (password sudah di-hash dengan password_hash):
---   admin_a      / AdminA123!      (role: admin)
---   admin_b      / AdminB123!      (role: admin)
---   superadmin   / SuperAdmin123!  (role: super_admin)
+-- KasKita — database/seed.sql (ARSIP MySQL — yang aktif dipakai: supabase_*.sql)
+-- Password awal TIDAK ditulis di sini — catat dari pemilik repo,
+-- lalu WAJIB diganti saat login pertama (dipaksa oleh sistem).
 -- ============================================================
 USE `kaskita_db`;
 
@@ -18,10 +16,10 @@ TRUNCATE TABLE `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ---------- users ----------
-INSERT INTO `users` (`username`, `email`, `password`, `display_name`, `role`) VALUES
-('admin_a',    'admin_a@kaskita.local',    '$2y$10$rLcSySwVMYDC8en9dNkS7OgHhMwcaneIk6G0ut3WiwRmheHN9yu/.', 'Admin A',    'admin'),
-('admin_b',    'admin_b@kaskita.local',    '$2y$10$1sEYwEwrizyt65Ed4MdOyeAhMgTiqgUaA1VvmGlmRSTVZ3H/z4rCG', 'Admin B',    'admin'),
-('superadmin', 'superadmin@kaskita.local', '$2y$10$wf0.7C0I5.EevEKSCDx0eu7dAgqknwhCo1wlPDOvBvZGVN4l3hUe6', 'Super Admin','super_admin');
+INSERT INTO `users` (`username`, `email`, `password`, `display_name`, `role`, `must_change_password`) VALUES
+('admin_a',    'admin_a@kaskita.local',    '$2y$10$JdIfWYvYDkx7nIxLPyJWPOLgufAKmHCLes4jIsTcdTljDwgxLCHZq', 'Admin A',    'admin',       1),
+('admin_b',    'admin_b@kaskita.local',    '$2y$10$rsN5dX4oKQPDXH7IELnSRu2VdAHxmpqvkEOnzC7NZ/zvVYB9eIh6y', 'Admin B',    'admin',       1),
+('superadmin', 'superadmin@kaskita.local', '$2y$10$IZ.XyMqyxwiI5vQIqVi11eBMshTheH.LbX7ehEvCyR7BoLL8VxjKG', 'Super Admin','super_admin', 1);
 
 -- ---------- participants (10 contoh) ----------
 INSERT INTO `participants` (`name`, `status`, `shirt_size`) VALUES

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   password VARCHAR(255) NOT NULL, -- hash via password_hash(), bukan plaintext
   display_name VARCHAR(100) NOT NULL,
   role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'super_admin', 'user')),
+  must_change_password BOOLEAN NOT NULL DEFAULT TRUE, -- TRUE = wajib ganti password saat login berikut
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

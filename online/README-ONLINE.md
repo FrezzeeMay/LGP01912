@@ -5,13 +5,13 @@ Folder `online/` adalah versi web yang databasenya memakai **Supabase**
 File web-nya (HTML/CSS/JS) ditaruh di hosting statis gratis (Netlify/Vercel —
 juga 24 jam). Versi PHP/MySQL lama tetap ada dan tidak diubah.
 
-**Akun (dibuat di langkah 3–4):**
+**Akun (dibuat di langkah 3–4, password KUAT ditentukan pemilik — tidak ditulis di sini):**
 
-| Email | Password | Role |
-|---|---|---|
-| `alpi019@gmail.com` | `LGP019` | Admin |
-| `naufal019@gmail.com` | `LGP019` | Admin |
-| `Rayhan019@gmail.com` | `Apalah019` | Super Admin |
+| Email | Role |
+|---|---|
+| `alpi019@gmail.com` | Admin |
+| `naufal019@gmail.com` | Admin |
+| `Rayhan019@gmail.com` | Super Admin |
 
 > Catatan: kamu menulis `Rayhan019@gmai.com` — saya asumsikan typo dari
 > `gmail.com`. Kalau memang `gmai.com`, ganti di `schema.sql` bagian AKUN.
@@ -37,10 +37,12 @@ juga 24 jam). Versi PHP/MySQL lama tetap ada dan tidak diubah.
 ## Langkah 3 — Buat 3 user login
 
 1. Menu **Authentication → Users → Add user → Create new user**.
-2. Buat satu per satu (centang **Auto Confirm User**):
-   - `alpi019@gmail.com` / `LGP019`
-   - `naufal019@gmail.com` / `LGP019`
-   - `Rayhan019@gmail.com` / `Apalah019`
+2. Buat satu per satu (centang **Auto Confirm User**), masing-masing dengan
+   **password acak minimal 16 karakter** (jangan pakai password pendek/berpola,
+   jangan tulis di file mana pun):
+    - `alpi019@gmail.com`
+    - `naufal019@gmail.com`
+    - `Rayhan019@gmail.com`
 
 ## Langkah 4 — Pasang role akun
 

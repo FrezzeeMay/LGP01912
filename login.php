@@ -30,11 +30,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'email' => $u['email'],
                 'display_name' => $u['display_name'],
                 'role' => $u['role'],
+                'must_change_password' => !empty($u['must_change_password']),
             ];
             try {
                 $pdo->prepare('INSERT INTO activity_logs (user_id, action, description) VALUES (?, ?, ?)')
                     ->execute([(int)$u['id'], 'login', 'Login ke sistem']);
             } catch (Throwable $ex) {}
+            // Wajib ganti password dulu bila flag masih menyala.
+            if (!empty($u['must_change_password'])) {
+                header('Location: change_password.php?first=1');
+                exit;
+            }
             $next = $_GET['next'] ?? 'admin/dashboard.php';
             // Cegah open-redirect: hanya path lokal.
             if (!str_starts_with($next, 'admin/')) $next = 'admin/dashboard.php';
@@ -75,14 +81,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button class="btn btn-primary btn-block" type="submit">Masuk</button>
       </form>
       <details class="demo">
-        <summary>Akun demo (dari supabase_seed.sql)</summary>
+        <summary>Akun demo</summary>
         <ul>
-          <li><code>alpi019@gmail.com</code> / <code>LGP019</code> — Admin (Alpi)</li>
-          <li><code>naufal019@gmail.com</code> / <code>LGP019</code> — Admin (Naufal)</li>
-          <li><code>Rayhan019@gmai.com</code> / <code>Apalah019</code> — Super Admin</li>
-          <li><code>viewer@kaskita.local</code> / <code>Viewer123!</code> — User (lihat saja)</li>
+          <li><code>alpi019@gmail.com</code> — Admin (Alpi)</li>
+          <li><code>naufal019@gmail.com</code> — Admin (Naufal)</li>
+          <li><code>Rayhan019@gmai.com</code> — Super Admin</li>
+          <li><code>viewer@kaskita.local</code> — User (lihat saja)</li>
         </ul>
-        <p class="muted small">Bisa login pakai username juga (mis. <code>alpi</code>).</p>
+        <p class="muted small">Password awal diberikan terpisah (tidak ditulis di sini demi keamanan)
+          dan <b>wajib diganti</b> saat login pertama. Bisa login pakai username juga.</p>
       </details>
     </div>
     <div class="login-side">

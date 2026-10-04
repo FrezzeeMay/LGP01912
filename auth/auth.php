@@ -13,7 +13,9 @@ function current_user(): ?array
     return $_SESSION['user'] ?? null;
 }
 
-/** Wajib login; jika belum, lempar ke login.php */
+/** Wajib login; jika belum, lempar ke login.php.
+ *  Jika akun masih berflag wajib-ganti-password, paksa ke change_password.php
+ *  (kecuali halaman itu sendiri & logout) — berlaku untuk semua halaman admin. */
 function require_login(): array
 {
     $u = current_user();
@@ -22,6 +24,11 @@ function require_login(): array
         $next = $_SERVER['REQUEST_URI'] ?? '';
         header('Location: ../login.php' . ($next ? '?next=' . urlencode($next) : ''));
         if (basename($_SERVER['SCRIPT_NAME']) === 'login.php') return [];
+        exit;
+    }
+    // require_login() hanya dipanggil dari admin/*.php, sehingga target selalu di root.
+    if (!empty($u['must_change_password'])) {
+        header('Location: ../change_password.php');
         exit;
     }
     return $u;

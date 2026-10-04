@@ -56,18 +56,24 @@ jadi website bisa diakses kapan saja tanpa PC menyala (saat deploy hosting).
 - Foto desain baju tetap tersimpan lokal di `uploads/shirts/`
   (hanya data teks/angka yang di Supabase).
 
-## 5. Akun (seed, password di-hash)
+## 5. Akun awal
 
-| Login (email/username)   | Password     | Role        |
-| ------------------------ | ------------ | ----------- |
-| `alpi019@gmail.com`      | `LGP019`     | Admin (Alpi) |
-| `naufal019@gmail.com`    | `LGP019`     | Admin (Naufal) |
-| `Rayhan019@gmai.com`    | `Apalah019`  | Super Admin |
-| `viewer@kaskita.local`   | `Viewer123!` | User (lihat saja) |
+| Login (email/username) | Role           |
+| ---------------------- | -------------- |
+| `alpi019@gmail.com`    | Admin (Alpi)   |
+| `naufal019@gmail.com`  | Admin (Naufal) |
+| `Rayhan019@gmai.com`   | Super Admin    |
+| `viewer@kaskita.local` | User (lihat saja) |
 
-> Catatan: email super admin ditulis persis sesuai permintaan
-> (`Rayhan019@gmai.com`). Kalau seharusnya `gmail.com`, kabari saja —
-> tinggal update 1 baris di seed + tabel `users`.
+> **Password awal TIDAK ditulis di repo ini.** Password awal yang kuat
+> dipegang pemilik repo dan diberikan langsung ke masing-masing orang.
+> Saat login pertama, sistem **memaksa ganti password** (min. 12 karakter)
+> sebelum halaman lain bisa dibuka — termasuk via API. Akun baru yang dibuat
+> Super Admin juga wajib ganti password saat login pertama.
+>
+> Email super admin ditulis persis sesuai permintaan (`Rayhan019@gmai.com`).
+> Kalau seharusnya `gmail.com`, update 1 baris di seed + tabel `users`,
+> lalu jalankan `database/supabase_migration_01.sql` bila DB sudah terlanjur dibuat.
 
 ## 6. Cara kerja role
 

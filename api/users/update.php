@@ -8,7 +8,7 @@ $role=$in['role']??'admin'; $pass=$in['password']??'';
 if(!preg_match('/^[A-Za-z0-9_]{3,50}$/',$username)||!filter_var($email,FILTER_VALIDATE_EMAIL)||$dname===''||!in_array($role,['admin','super_admin','user'],true)) jres(false,'Input tidak valid.',null,422);
 try {
   if($pass!==''){ if(strlen($pass)<8) jres(false,'Password minimal 8 karakter.',null,422);
-    $pdo->prepare('UPDATE users SET username=?,email=?,password=?,display_name=?,role=? WHERE id=?')->execute([$username,$email,password_hash($pass,PASSWORD_DEFAULT),$dname,$role,$id]);
+    $pdo->prepare('UPDATE users SET username=?,email=?,password=?,display_name=?,role=?,must_change_password=TRUE WHERE id=?')->execute([$username,$email,password_hash($pass,PASSWORD_DEFAULT),$dname,$role,$id]);
   } else $pdo->prepare('UPDATE users SET username=?,email=?,display_name=?,role=? WHERE id=?')->execute([$username,$email,$dname,$role,$id]);
   log_activity($pdo,(int)$u['id'],'edit_admin',"Mengedit akun {$username} (via API)");
   jres(true,'Akun diperbarui.');

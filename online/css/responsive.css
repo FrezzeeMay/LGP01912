@@ -1,0 +1,30 @@
+/* KasKita — responsive.css : desktop, laptop, tablet, HP. */
+@media (max-width:1200px){
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .shirt-grid{grid-template-columns:1fr}
+}
+@media (max-width:900px){
+  .login-wrap{grid-template-columns:1fr}
+  .login-side{display:none}
+  .form-grid{grid-template-columns:1fr}
+}
+@media (max-width:820px){
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-105%);transition:transform .22s ease;box-shadow:0 0 60px rgba(0,0,0,.3)}
+  body.nav-open .sidebar{transform:none}
+  .nav-toggle{display:flex}
+  .scrim{display:none;position:fixed;inset:0;background:rgba(15,30,56,.45);z-index:35}
+  body.nav-open .scrim{display:block}
+  .topbar{margin:70px 12px 0;padding:12px 14px}
+  .topbar-title h1{font-size:18px}
+  .clock{display:none}
+  .content{padding:14px 12px}
+  .stats{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat strong{font-size:18px}
+  .btn{min-height:42px} /* tombol tetap mudah ditekan */
+  table.grid{font-size:13px;min-width:640px} /* tabel scroll horizontal */
+  .modal{width:100%}
+}
+@media (max-width:420px){
+  .stats{grid-template-columns:1fr 1fr}
+  .toolbar .grow{min-width:100%}
+}

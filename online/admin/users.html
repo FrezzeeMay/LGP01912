@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kelola Admin — KasKita</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+  <div class="scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="dashboard.html"><span class="brand-mark">K</span><span class="brand-text"><strong>KasKita</strong><small>Sistem Kas &amp; Pembuatan Baju</small></span></a>
+    <nav class="side-nav">
+      <a href="dashboard.html">Dashboard</a><a href="payments.html">Kas &amp; Pembayaran</a>
+      <a href="participants.html">Peserta</a><a href="shirts.html">Baju Gabungan</a>
+      <a href="activity.html">Aktivitas</a><a href="users.html" class="on">Kelola Admin</a>
+    </nav>
+    <div class="side-user"><div class="avatar">A</div>
+      <div class="who"><strong data-user-name>…</strong><small><span data-user-role>…</span> · <span data-user-mail></span></small></div>
+      <button class="btn btn-ghost btn-sm" data-logout>Keluar</button></div>
+  </aside>
+  <div class="main">
+    <header class="topbar"><div class="topbar-title"><h1>Kelola Admin</h1><p>Hanya Super Admin. Akun login dibuat di dashboard Supabase.</p></div>
+      <div class="topbar-meta"><span class="role-badge" data-user-role>…</span><span class="clock" id="clock"></span></div></header>
+    <main class="content" id="toasts">
+      <div class="panel"><div class="panel-body">
+        <p style="margin-top:0"><b>Cara tambah akun baru:</b> buka Supabase → <b>Authentication → Add user → Create new user</b> (isi email + password, centang <i>Auto Confirm User</i>) → salin <b>UUID</b>-nya → klik <b>+ Pasang Profil</b> di bawah dan isi UUID + role.</p>
+        <button class="btn btn-primary btn-sm" onclick="addForm()">+ Pasang Profil</button>
+      </div></div>
+      <div class="panel"><div class="panel-head"><h2>Akun</h2></div>
+        <div class="table-wrap"><table class="grid"><thead><tr><th>Nama Tampil</th><th>Email</th><th>Role</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="body"><tr><td colspan="5" class="empty">Memuat…</td></tr></tbody></table></div>
+      </div>
+    </main>
+    <footer class="foot">KasKita · Data live dari Supabase</footer>
+  </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Detail</h3><button class="icon-btn" data-close-modal>✕</button></div><div class="modal-body" id="modalBody"></div></div></div>
+<script src="../js/config.js"></script>
+<script src="../js/app.js"></script>
+<script>
+let ME = null, DATA = [];
+(async () => {
+  ME = await guard(['super_admin']);
+  if (!ME) return;
+  reload();
+})();
+async function reload() {
+  const { data } = await sb.from('profiles').select('*').order('created_at');
+  DATA = data || [];
+  document.getElementById('body').innerHTML = DATA.map((r) =>
+    '<tr><td><strong>' + esc(r.display_name) + '</strong><br><span class="muted small">' + esc(r.id.slice(0, 8)) + '…</span></td><td><code>' + esc(r.email) + '</code></td>' +
+    '<td>' + (r.role === 'super_admin' ? '<span class="badge warn">Super Admin</span>' : '<span class="badge info">Admin</span>') + '</td><td>' + tgl(r.created_at) + '</td>' +
+    '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editForm(\'' + r.id + '\')">Edit</button>' +
+    (r.id !== ME.id ? '<button class="btn btn-danger btn-sm" onclick="delP(\'' + r.id + '\')">Lepas</button>' : '') + '</div></td></tr>').join('');
+}
+function formHtml(r) {
+  return '<form id="fU">' + (r ? '' : '<label>User UUID (dari Authentication)<input type="text" id="uId" required placeholder="xxxxxxxx-xxxx-…"></label>') +
+    '<label>Email<input type="email" id="uE" required value="' + esc(r?.email || '') + '"></label>' +
+    '<label>Nama Tampil<input type="text" id="uD" required maxlength="100" value="' + esc(r?.display_name || '') + '"></label>' +
+    '<label>Role<select id="uR"><option value="admin"' + (r?.role !== 'super_admin' ? ' selected' : '') + '>Admin</option><option value="super_admin"' + (r?.role === 'super_admin' ? ' selected' : '') + '>Super Admin</option></select></label>' +
+    '<button class="btn btn-primary btn-block">Simpan</button></form>';
+}
+function addForm() {
+  openModal('Pasang Profil Admin', formHtml(null));
+  document.getElementById('fU').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const { error } = await sb.from('profiles').insert({ id: document.getElementById('uId').value.trim(), email: document.getElementById('uE').value.trim(), display_name: document.getElementById('uD').value.trim(), role: document.getElementById('uR').value });
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+    await logActivity('tambah_admin', 'Memasang profil admin ' + document.getElementById('uE').value.trim());
+    toast('Profil terpasang.'); closeModal(); reload();
+  });
+}
+function editForm(id) {
+  const r = DATA.find((x) => x.id === id);
+  openModal('Edit Akun', formHtml(r));
+  document.getElementById('fU').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const { error } = await sb.from('profiles').update({ email: document.getElementById('uE').value.trim(), display_name: document.getElementById('uD').value.trim(), role: document.getElementById('uR').value }).eq('id', id);
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+    await logActivity('edit_admin', 'Mengedit akun ' + r.email);
+    toast('Akun diperbarui.'); closeModal(); reload();
+  });
+}
+async function delP(id) {
+  const r = DATA.find((x) => x.id === id);
+  if (!confirm('Lepas profil ' + r.email + '? (Setelah itu hapus juga user-nya di Authentication agar tidak bisa login.)')) return;
+  const { error } = await sb.from('profiles').delete().eq('id', id);
+  if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+  await logActivity('hapus_admin', 'Melepas profil ' + r.email);
+  toast('Profil dilepas.'); reload();
+}
+</script>
+</body>
+</html>

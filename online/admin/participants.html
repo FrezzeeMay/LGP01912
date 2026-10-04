@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peserta — KasKita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+  <div class="scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="dashboard.html"><span class="brand-mark">K</span><span class="brand-text"><strong>KasKita</strong><small>Sistem Kas &amp; Pembuatan Baju</small></span></a>
+    <nav class="side-nav">
+      <a href="dashboard.html">Dashboard</a><a href="payments.html">Kas &amp; Pembayaran</a>
+      <a href="participants.html" class="on">Peserta</a><a href="shirts.html">Baju Gabungan</a>
+      <a href="activity.html">Aktivitas</a><a href="users.html" class="only-super">Kelola Admin</a>
+    </nav>
+    <div class="side-user"><div class="avatar">A</div>
+      <div class="who"><strong data-user-name>…</strong><small><span data-user-role>…</span> · <span data-user-mail></span></small></div>
+      <button class="btn btn-ghost btn-sm" data-logout>Keluar</button></div>
+  </aside>
+  <div class="main">
+    <header class="topbar"><div class="topbar-title"><h1>Peserta</h1><p>Hanya Super Admin yang dapat menambah/mengubah/menghapus.</p></div>
+      <div class="topbar-meta"><span class="role-badge" data-user-role>…</span><span class="clock" id="clock"></span></div></header>
+    <main class="content" id="toasts">
+      <div class="panel"><div class="panel-head"><h2>Daftar Peserta</h2><span class="spacer"></span>
+          <input type="text" id="q" placeholder="Cari nama…" style="margin:0;max-width:220px">
+          <button class="btn btn-primary btn-sm only-super" onclick="addForm()">+ Tambah</button></div>
+        <div class="table-wrap"><table class="grid"><thead><tr><th>No</th><th>Nama</th><th>Status</th><th>Ukuran</th><th style="text-align:right">Total Kas</th><th class="only-super">Aksi</th></tr></thead><tbody id="body"><tr><td colspan="6" class="empty">Memuat…</td></tr></tbody></table></div>
+      </div>
+    </main>
+    <footer class="foot">KasKita · Data live dari Supabase</footer>
+  </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Detail</h3><button class="icon-btn" data-close-modal>✕</button></div><div class="modal-body" id="modalBody"></div></div></div>
+<script src="../js/config.js"></script>
+<script src="../js/app.js"></script>
+<script>
+let ME = null, DATA = [];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+(async () => {
+  ME = await guard(['admin', 'super_admin']);
+  if (!ME) return;
+  reload();
+})();
+async function reload() {
+  const { data: ps } = await sb.from('participants').select('*').order('name');
+  const { data: pays } = await sb.from('payments').select('participant_id, amount');
+  const tot = {};
+  (pays || []).forEach((p) => (tot[p.participant_id] = (tot[p.participant_id] || 0) + p.amount));
+  DATA = (ps || []).map((p) => ({ ...p, total: tot[p.id] || 0 }));
+  render();
+}
+function render() {
+  const q = document.getElementById('q').value.toLowerCase();
+  const rows = DATA.filter((r) => r.name.toLowerCase().includes(q));
+  const super_ = ME.role === 'super_admin';
+  document.getElementById('body').innerHTML = rows.length ? rows.map((r, i) =>
+    '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.name) + '</strong></td>' +
+    '<td>' + (r.status === 'aktif' ? '<span class="badge ok">Aktif</span>' : '<span class="badge bad">Nonaktif</span>') + '</td>' +
+    '<td>' + esc(r.shirt_size || '—') + '</td><td class="num">' + rupiah(r.total) + '</td>' +
+    (super_ ? '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editForm(' + r.id + ')">Edit</button><button class="btn btn-danger btn-sm" onclick="delP(' + r.id + ')">Hapus</button></div></td>' : '')) +
+    '</tr>').join('') : '<tr><td colspan="6" class="empty">Belum ada peserta.</td></tr>';
+}
+document.getElementById('q').addEventListener('input', render);
+function formHtml(r) {
+  return '<form id="fP"><label>Nama<input type="text" id="pN" maxlength="100" required value="' + esc(r?.name || '') + '"></label>' +
+    '<div class="form-grid"><label>Status<select id="pS"><option value="aktif"' + (r?.status !== 'nonaktif' ? ' selected' : '') + '>Aktif</option><option value="nonaktif"' + (r?.status === 'nonaktif' ? ' selected' : '') + '>Nonaktif</option></select></label>' +
+    '<label>Ukuran Baju<select id="pZ"><option value="">—</option>' + SIZES.map((s) => '<option' + (r?.shirt_size === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></label></div>' +
+    '<button class="btn btn-primary btn-block">Simpan</button></form>';
+}
+function addForm() {
+  openModal('Tambah Peserta', formHtml(null));
+  document.getElementById('fP').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('pN').value.trim();
+    const { error } = await sb.from('participants').insert({ name, status: document.getElementById('pS').value, shirt_size: document.getElementById('pZ').value || null });
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+    await logActivity('tambah_peserta', 'Menambahkan peserta ' + name);
+    toast('Peserta ' + name + ' ditambahkan.'); closeModal(); reload();
+  });
+}
+function editForm(id) {
+  const r = DATA.find((x) => x.id === id);
+  openModal('Edit Peserta', formHtml(r));
+  document.getElementById('fP').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('pN').value.trim();
+    const { error } = await sb.from('participants').update({ name, status: document.getElementById('pS').value, shirt_size: document.getElementById('pZ').value || null }).eq('id', id);
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+    await logActivity('edit_peserta', 'Mengedit peserta ' + name);
+    toast('Peserta diperbarui.'); closeModal(); reload();
+  });
+}
+async function delP(id) {
+  const nm = DATA.find((x) => x.id === id)?.name || '';
+  if (!confirm('Hapus ' + nm + ' beserta SEMUA transaksinya?')) return;
+  const { error } = await sb.from('participants').delete().eq('id', id);
+  if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+  await logActivity('hapus_peserta', 'Menghapus peserta ' + nm);
+  toast('Peserta dihapus.'); reload();
+}
+</script>
+</body>
+</html>

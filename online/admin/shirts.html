@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baju Gabungan — KasKita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+  <div class="scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="dashboard.html"><span class="brand-mark">K</span><span class="brand-text"><strong>KasKita</strong><small>Sistem Kas &amp; Pembuatan Baju</small></span></a>
+    <nav class="side-nav">
+      <a href="dashboard.html">Dashboard</a><a href="payments.html">Kas &amp; Pembayaran</a>
+      <a href="participants.html">Peserta</a><a href="shirts.html" class="on">Baju Gabungan</a>
+      <a href="activity.html">Aktivitas</a><a href="users.html" class="only-super">Kelola Admin</a>
+    </nav>
+    <div class="side-user"><div class="avatar">A</div>
+      <div class="who"><strong data-user-name>…</strong><small><span data-user-role>…</span> · <span data-user-mail></span></small></div>
+      <button class="btn btn-ghost btn-sm" data-logout>Keluar</button></div>
+  </aside>
+  <div class="main">
+    <header class="topbar"><div class="topbar-title"><h1>Baju Gabungan</h1><p>Target = harga × peserta (otomatis).</p></div>
+      <div class="topbar-meta"><span class="role-badge" data-user-role>…</span><span class="clock" id="clock"></span></div></header>
+    <main class="content" id="toasts">
+      <div class="panel only-super"><div class="panel-head"><h2>Buat Project Baju</h2></div>
+        <div class="panel-body"><form id="fProj">
+          <div class="form-grid">
+            <label>Nama Project<input type="text" id="pName" required maxlength="150" placeholder="Baju Angkatan 2026"></label>
+            <label>Foto / Desain (JPG/PNG/WebP, maks 2 MB)<input type="file" id="pImg" accept=".jpg,.jpeg,.png,.webp"></label>
+          </div>
+          <img id="prevNew" alt="" style="display:none;max-width:220px;border-radius:12px;margin-top:8px">
+          <label>Deskripsi<textarea id="pDesc" placeholder="Bahan, warna, jadwal produksi…"></textarea></label>
+          <div class="form-grid" style="grid-template-columns:repeat(3,1fr)">
+            <label>Harga / orang (Rp)<input type="number" id="pPrice" min="0" value="75000" required></label>
+            <label>Jumlah Peserta<input type="number" id="pCount" min="0" value="10" required></label>
+            <label>Status<select id="pStatus"><option value="berjalan">Berjalan</option><option value="selesai">Selesai</option><option value="batal">Batal</option></select></label>
+          </div>
+          <p>Target otomatis: <strong id="pTarget">Rp0</strong></p>
+          <button class="btn btn-primary">Buat Project</button>
+        </form></div>
+      </div>
+      <div id="list"><div class="panel"><div class="panel-body empty">Memuat…</div></div></div>
+    </main>
+    <footer class="foot">KasKita · Data live dari Supabase</footer>
+  </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Detail</h3><button class="icon-btn" data-close-modal>✕</button></div><div class="modal-body" id="modalBody"></div></div></div>
+<script src="../js/config.js"></script>
+<script src="../js/app.js"></script>
+<script>
+let ME = null, PROJS = [], MEMS = {}, PESERTA = [];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const payStatus = (paid, price) => paid <= 0 ? 'belum_bayar' : paid >= price ? 'lunas' : 'sebagian';
+(async () => {
+  ME = await guard(['admin', 'super_admin']);
+  if (!ME) return;
+  const calc = () => (document.getElementById('pTarget').textContent = rupiah(Number(document.getElementById('pPrice').value || 0) * Number(document.getElementById('pCount').value || 0)));
+  ['pPrice', 'pCount'].forEach((id) => document.getElementById(id).addEventListener('input', calc)); calc();
+  document.getElementById('pImg').addEventListener('change', (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const img = document.getElementById('prevNew'); img.src = URL.createObjectURL(f); img.style.display = 'block';
+  });
+  await reload();
+})();
+async function reload() {
+  const { data: pr } = await sb.from('shirt_projects').select('*').order('id', { ascending: false });
+  PROJS = pr || [];
+  const { data: ps } = await sb.from('participants').select('id, name').eq('status', 'aktif').order('name');
+  PESERTA = ps || [];
+  MEMS = {};
+  if (PROJS.length) {
+    const { data: m } = await sb.from('shirt_participants').select('*, participants(name)').in('project_id', PROJS.map((p) => p.id)).order('id');
+    (m || []).sort((a, b) => (a.participants?.name || '').localeCompare(b.participants?.name || ''));
+    (m || []).forEach((x) => { (MEMS[x.project_id] = MEMS[x.project_id] || []).push(x); });
+  }
+  render();
+}
+function render() {
+  const box = document.getElementById('list');
+  const sup = ME.role === 'super_admin';
+  if (!PROJS.length) { box.innerHTML = '<div class="panel"><div class="panel-body empty">Belum ada project baju.</div></div>'; return; }
+  box.innerHTML = PROJS.map((p) => {
+    const m = MEMS[p.id] || [];
+    const got = m.reduce((s, x) => s + x.amount_paid, 0);
+    const pct = p.target_amount > 0 ? Math.min(100, (got / p.target_amount) * 100) : 0;
+    const kurang = Math.max(0, p.target_amount - got);
+    const rows = m.map((x, i) => {
+      const sisa = Math.max(0, p.price_per_person - x.amount_paid);
+      return '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(x.participants?.name || '') + '</strong></td><td>' + esc(x.size) + '</td>' +
+        '<td class="num">' + rupiah(p.price_per_person) + '</td><td class="num">' + rupiah(x.amount_paid) + '<br><span class="muted small">sisa ' + rupiah(sisa) + '</span></td>' +
+        '<td><span class="badge ' + shirtBadge(x.status) + '">' + shirtLabel(x.status) + '</span></td>' +
+        '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="payForm(' + x.id + ')">+ Setor</button><button class="btn btn-ghost btn-sm" onclick="editMem(' + x.id + ')">Edit</button><button class="btn btn-danger btn-sm" onclick="delMem(' + x.id + ')">Hapus</button></div></td></tr>';
+    }).join('') || '<tr><td colspan="7" class="empty">Belum ada anggota.</td></tr>';
+    return '<div class="panel"><div class="panel-head"><h2>' + esc(p.name) + '</h2><span class="badge info">' + esc(p.status) + '</span><span class="spacer"></span>' +
+      (sup ? '<button class="btn btn-ghost btn-sm" onclick="editProj(' + p.id + ')">Edit Project</button><button class="btn btn-danger btn-sm" onclick="delProj(' + p.id + ')">Hapus</button>' : '') + '</div>' +
+      '<div class="panel-body"><div class="shirt-grid"><div>' +
+      (p.image ? '<img class="shirt-photo" src="' + esc(p.image) + '">' : '<div class="empty" style="border:1px dashed var(--line);border-radius:14px">Belum ada foto.</div>') +
+      (p.description ? '<p class="muted small">' + esc(p.description) + '</p>' : '') + '</div><div>' +
+      '<dl class="kv"><dt>Harga / orang</dt><dd>' + rupiah(p.price_per_person) + '</dd><dt>Peserta target</dt><dd>' + p.participant_count + ' orang</dd><dt>Target</dt><dd>' + rupiah(p.target_amount) + '</dd><dt>Terkumpul</dt><dd>' + rupiah(got) + ' (' + pct.toFixed(2) + '%)</dd></dl>' +
+      '<div class="progress"><i style="width:' + pct.toFixed(2) + '%"></i></div><p>' + (kurang <= 0 && p.target_amount > 0 ? '<strong>Target tercapai!</strong>' : 'Kurang <strong>' + rupiah(kurang) + '</strong> lagi') + '</p>' +
+      '<h3>Anggota (' + m.length + ')</h3><form class="toolbar" onsubmit="addMem(event,' + p.id + ')">' +
+      '<div class="grow"><label style="margin:0">Peserta<select id="mp' + p.id + '" required><option value="">— pilih —</option>' + PESERTA.map((a) => '<option value="' + a.id + '">' + esc(a.name) + '</option>').join('') + '</select></label></div>' +
+      '<div><label style="margin:0">Ukuran<select id="ms' + p.id + '">' + SIZES.map((s) => '<option' + (s === 'L' ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></label></div>' +
+      '<div><label style="margin:0">Sudah Bayar<input type="number" id="ma' + p.id + '" min="0" value="0"></label></div>' +
+      '<div><label style="margin:0">&nbsp;<button class="btn btn-primary btn-sm" style="width:100%">Tambah</button></label></div></form>' +
+      '<div class="table-wrap" style="margin-top:10px"><table class="grid"><thead><tr><th>No</th><th>Nama</th><th>Ukuran</th><th style="text-align:right">Harga</th><th style="text-align:right">Dibayar</th><th>Status</th><th>Aksi</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '</div></div></div></div>';
+  }).join('');
+}
+// ---- project ----
+async function uploadPhoto(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) throw new Error('Format harus JPG/PNG/WebP.');
+  if (file.size > 2 * 1024 * 1024) throw new Error('Maksimal 2 MB.');
+  const path = 'baju_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+  const { error } = await sb.storage.from('shirt-images').upload(path, file);
+  if (error) throw error;
+  return sb.storage.from('shirt-images').getPublicUrl(path).data.publicUrl;
+}
+document.getElementById('fProj').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    const name = document.getElementById('pName').value.trim();
+    const price = Number(document.getElementById('pPrice').value || 0), count = Number(document.getElementById('pCount').value || 0);
+    const f = document.getElementById('pImg').files[0];
+    const img = f ? await uploadPhoto(f) : null;
+    const { error } = await sb.from('shirt_projects').insert({ name, image: img, description: document.getElementById('pDesc').value.trim() || null, price_per_person: price, participant_count: count, target_amount: price * count, status: document.getElementById('pStatus').value });
+    if (error) throw error;
+    await logActivity('buat_project_baju', 'Membuat project "' + name + '" (target ' + rupiah(price * count) + ')');
+    toast('Project dibuat.'); e.target.reset(); reload();
+  } catch (err) { toast('Gagal: ' + err.message, 'error'); }
+});
+function editProj(id) {
+  const p = PROJS.find((x) => x.id === id);
+  openModal('Edit Project', '<form id="fEP"><label>Nama<input type="text" id="epN" required maxlength="150" value="' + esc(p.name) + '"></label><label>Ganti Foto (opsional)<input type="file" id="epI" accept=".jpg,.jpeg,.png,.webp"></label><label>Deskripsi<textarea id="epD">' + esc(p.description || '') + '</textarea></label><div class="form-grid" style="grid-template-columns:repeat(3,1fr)"><label>Harga<input type="number" id="epP" min="0" value="' + p.price_per_person + '"></label><label>Jumlah<input type="number" id="epC" min="0" value="' + p.participant_count + '"></label><label>Status<select id="epS"><option value="berjalan"' + (p.status === 'berjalan' ? ' selected' : '') + '>Berjalan</option><option value="selesai"' + (p.status === 'selesai' ? ' selected' : '') + '>Selesai</option><option value="batal"' + (p.status === 'batal' ? ' selected' : '') + '>Batal</option></select></label></div><button class="btn btn-primary btn-block">Simpan</button></form>');
+  document.getElementById('fEP').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const price = Number(document.getElementById('epP').value || 0), count = Number(document.getElementById('epC').value || 0);
+      const f = document.getElementById('epI').files[0];
+      const patch = { name: document.getElementById('epN').value.trim(), description: document.getElementById('epD').value.trim() || null, price_per_person: price, participant_count: count, target_amount: price * count, status: document.getElementById('epS').value };
+      if (f) patch.image = await uploadPhoto(f);
+      const { error } = await sb.from('shirt_projects').update(patch).eq('id', id);
+      if (error) throw error;
+      await logActivity('edit_project_baju', 'Mengedit project "' + patch.name + '"');
+      toast('Project diperbarui.'); closeModal(); reload();
+    } catch (err) { toast('Gagal: ' + err.message, 'error'); }
+  });
+}
+async function delProj(id) {
+  const p = PROJS.find((x) => x.id === id);
+  if (!confirm('Hapus project ' + p.name + ' beserta semua anggotanya?')) return;
+  const { error } = await sb.from('shirt_projects').delete().eq('id', id);
+  if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+  await logActivity('hapus_project_baju', 'Menghapus project ' + p.name);
+  toast('Project dihapus.'); reload();
+}
+// ---- anggota ----
+async function addMem(e, pid) {
+  e.preventDefault();
+  const part = Number(document.getElementById('mp' + pid).value);
+  const size = document.getElementById('ms' + pid).value;
+  const paid = Number(document.getElementById('ma' + pid).value || 0);
+  const price = PROJS.find((x) => x.id === pid).price_per_person;
+  const { error } = await sb.from('shirt_participants').upsert({ project_id: pid, participant_id: part, size, amount_paid: paid, status: payStatus(paid, price) }, { onConflict: 'project_id,participant_id' });
+  if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+  await sb.from('participants').update({ shirt_size: size }).eq('id', part);
+  await logActivity('tambah_anggota_baju', 'Menambah anggota ke project #' + pid + ' (' + rupiah(paid) + ')');
+  toast('Anggota ditambahkan.'); reload();
+}
+function allMems() { return Object.values(MEMS).flat(); }
+function editMem(mid) {
+  const m = allMems().find((x) => x.id === mid);
+  openModal('Edit Anggota', '<form id="fEM"><div class="form-grid"><label>Ukuran<select id="emS">' + SIZES.map((s) => '<option' + (m.size === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></label><label>Total Dibayar<input type="number" id="emP" min="0" value="' + m.amount_paid + '"></label></div><button class="btn btn-primary btn-block">Simpan</button></form>');
+  document.getElementById('fEM').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const size = document.getElementById('emS').value, paid = Number(document.getElementById('emP').value || 0);
+    const price = PROJS.find((x) => x.id === m.project_id).price_per_person;
+    const { error } = await sb.from('shirt_participants').update({ size, amount_paid: paid, status: payStatus(paid, price) }).eq('id', mid);
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+    await logActivity('edit_anggota_baju', 'Mengedit anggota baju #' + mid);
+    toast('Anggota diperbarui.'); closeModal(); reload();
+  });
+}
+function payForm(mid) {
+  openModal('Setoran Baju', '<form id="fPay"><label>Nominal Setoran (Rp)<input type="number" id="payA" min="1" required placeholder="25000"></label><button class="btn btn-primary btn-block">Catat Setoran</button></form>');
+  document.getElementById('fPay').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const add = Number(document.getElementById('payA').value);
+    const m = allMems().find((x) => x.id === mid);
+    const price = PROJS.find((x) => x.id === m.project_id).price_per_person;
+    const total = m.amount_paid + add;
+    const { error } = await sb.from('shirt_participants').update({ amount_paid: total, status: payStatus(total, price) }).eq('id', mid);
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+    await logActivity('bayar_baju', 'Setoran baju ' + rupiah(add) + ' (total ' + rupiah(total) + ')');
+    toast('Setoran tercatat.'); closeModal(); reload();
+  });
+}
+async function delMem(mid) {
+  if (!confirm('Hapus anggota ini dari project?')) return;
+  const { error } = await sb.from('shirt_participants').delete().eq('id', mid);
+  if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+  await logActivity('hapus_anggota_baju', 'Menghapus anggota baju #' + mid);
+  toast('Anggota dihapus.'); reload();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# KasKita .gitignore — yang TIDAK ikut ke GitHub:
+# Foto upload (data lokal tiap install, berisi gambar asli)
+uploads/shirts/*
+!uploads/shirts/.gitkeep
+# File rahasia / lokal
+config/*.local.php
+.env
+*.log
+# Sampah OS & editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/

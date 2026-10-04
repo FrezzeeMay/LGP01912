@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kas &amp; Pembayaran — KasKita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+  <div class="scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="dashboard.html"><span class="brand-mark">K</span><span class="brand-text"><strong>KasKita</strong><small>Sistem Kas &amp; Pembuatan Baju</small></span></a>
+    <nav class="side-nav">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="payments.html" class="on">Kas &amp; Pembayaran</a>
+      <a href="participants.html">Peserta</a>
+      <a href="shirts.html">Baju Gabungan</a>
+      <a href="activity.html">Aktivitas</a>
+      <a href="users.html" class="only-super">Kelola Admin</a>
+    </nav>
+    <div class="side-user">
+      <div class="avatar">A</div>
+      <div class="who"><strong data-user-name>…</strong><small><span data-user-role>…</span> · <span data-user-mail></span></small></div>
+      <button class="btn btn-ghost btn-sm" data-logout>Keluar</button>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title"><h1>Kas &amp; Pembayaran</h1><p>Total dihitung otomatis dari seluruh transaksi.</p></div>
+      <div class="topbar-meta"><span class="role-badge" data-user-role>…</span><span class="clock" id="clock"></span></div>
+    </header>
+    <main class="content" id="toasts">
+      <div class="panel"><div class="panel-head"><h2>+ Tambah Pembayaran</h2></div>
+        <div class="panel-body">
+          <form id="fAdd" class="toolbar">
+            <div class="grow"><label style="margin:0">Peserta<select id="aPeserta" required><option value="">— pilih —</option></select></label></div>
+            <div><label style="margin:0">Nominal (Rp)<input type="number" id="aAmount" min="1" max="1000000000" step="500" required placeholder="5000"></label></div>
+            <div><label style="margin:0">Tanggal<input type="date" id="aDate" required></label></div>
+            <div class="grow"><label style="margin:0">Catatan<input type="text" id="aNote" maxlength="255" placeholder="mis. Kas minggu ke-3"></label></div>
+            <div><label style="margin:0">&nbsp;<button class="btn btn-primary" style="width:100%">Simpan</button></label></div>
+          </form>
+          <p class="muted small" style="margin:8px 0 0">Akun yang login otomatis tercatat sebagai penginput.</p>
+        </div>
+      </div>
+      <div class="panel"><div class="panel-head"><h2>Tabel Kas</h2><span class="spacer"></span>
+          <input type="text" id="q" placeholder="Cari nama…" style="margin:0;max-width:220px">
+          <select id="flt" style="margin:0;max-width:160px"><option value="semua">Semua</option><option value="sudah">Sudah bayar</option><option value="belum">Belum bayar</option></select>
+        </div>
+        <div class="table-wrap"><table class="grid"><thead><tr><th>No</th><th>Nama</th><th>Riwayat</th><th style="text-align:right">Total</th></tr></thead><tbody id="body"><tr><td colspan="4" class="empty">Memuat…</td></tr></tbody></table></div>
+        <div class="panel-body" style="border-top:1px solid var(--line)"><h2 style="margin:0">Total Keseluruhan Kas: <span style="color:var(--primary)" id="grand">…</span></h2></div>
+      </div>
+    </main>
+    <footer class="foot">KasKita · Data live dari Supabase</footer>
+  </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Detail</h3><button class="icon-btn" data-close-modal>✕</button></div><div class="modal-body" id="modalBody"></div></div></div>
+<script src="../js/config.js"></script>
+<script src="../js/app.js"></script>
+<script>
+let ME = null, DATA = [];
+(async () => {
+  ME = await guard(['admin', 'super_admin']);
+  if (!ME) return;
+  document.getElementById('aDate').value = new Date().toISOString().slice(0, 10);
+  await reload();
+})();
+async function reload() {
+  const { data: ps } = await sb.from('participants').select('id, name').eq('status', 'aktif').order('name');
+  document.getElementById('aPeserta').innerHTML = '<option value="">— pilih —</option>' + (ps || []).map((p) => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+  const { data: pays } = await sb.from('payments').select('*').order('payment_date', { ascending: false });
+  const byId = {};
+  (pays || []).forEach((p) => { (byId[p.participant_id] = byId[p.participant_id] || []).push(p); });
+  DATA = (ps || []).map((p) => {
+    const l = byId[p.id] || [];
+    return { ...p, total: l.reduce((s, x) => s + x.amount, 0), n: l.length, first: l[0] || null };
+  });
+  document.getElementById('grand').textContent = rupiah(DATA.reduce((s, x) => s + x.total, 0));
+  render();
+}
+function render() {
+  const q = document.getElementById('q').value.toLowerCase(), f = document.getElementById('flt').value;
+  let rows = DATA.filter((r) => r.name.toLowerCase().includes(q));
+  if (f === 'sudah') rows = rows.filter((r) => r.n > 0);
+  if (f === 'belum') rows = rows.filter((r) => r.n === 0);
+  document.getElementById('body').innerHTML = rows.length ? rows.map((r, i) =>
+    '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.name) + '</strong><br><span class="muted small">' + r.n + ' transaksi</span></td><td>' +
+    (r.n ? '<span class="muted small">' + tgl(r.first.payment_date) + ' ' + rupiah(r.first.amount) + (r.n > 1 ? ' <b>+' + (r.n - 1) + ' lainnya</b>' : '') + '</span><br><button class="btn btn-ghost btn-sm" onclick="historyOf(' + r.id + ')">Lihat Riwayat</button>' : '<span class="badge neutral">Belum bayar</span>') +
+    '</td><td class="num"><strong>' + rupiah(r.total) + '</strong></td></tr>').join('')
+    : '<tr><td colspan="4" class="empty">Tidak ada peserta yang cocok.</td></tr>';
+}
+document.getElementById('q').addEventListener('input', render);
+document.getElementById('flt').addEventListener('change', render);
+
+document.getElementById('fAdd').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pid = Number(document.getElementById('aPeserta').value);
+  const amount = Number(document.getElementById('aAmount').value);
+  const date = document.getElementById('aDate').value, note = document.getElementById('aNote').value.trim();
+  if (!pid || !(amount > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('Lengkapi peserta, nominal, dan tanggal.', 'error'); return; }
+  const { data, error } = await sb.from('payments').insert({ participant_id: pid, amount, payment_date: date, note: note || null, created_by: ME.id }).select('id').single();
+  if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+  const nm = DATA.find((x) => x.id === pid)?.name || '';
+  await logActivity('tambah_pembayaran', 'Menambahkan pembayaran ' + rupiah(amount) + ' untuk ' + nm);
+  toast('Pembayaran ' + rupiah(amount) + ' untuk ' + nm + ' tersimpan.');
+  e.target.reset(); document.getElementById('aDate').value = new Date().toISOString().slice(0, 10);
+  reload();
+});
+
+async function historyOf(pid) {
+  const r = DATA.find((x) => x.id === pid);
+  const { data } = await sb.from('payments').select('*, profiles!payments_created_by_fkey(display_name)').eq('participant_id', pid).order('payment_date', { ascending: false });
+  const rows = (data || []).map((x) =>
+    '<tr><td>' + tgl(x.payment_date) + '<br><span class="muted small">' + esc(x.note || '') + '</span></td><td class="num">' + rupiah(x.amount) + '</td><td>' + esc(x.profiles?.display_name || '-') + '</td>' +
+    '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick=\'editPay(' + x.id + ',' + x.amount + ',"' + x.payment_date + '",' + JSON.stringify(x.note || '').replace(/"/g, '&quot;') + ')\'>Edit</button>' +
+    '<button class="btn btn-danger btn-sm" onclick="delPay(' + x.id + ',' + x.amount + ',' + pid + ')">Hapus</button></div></td></tr>').join('');
+  openModal('Riwayat — ' + r.name, '<table class="grid"><thead><tr><th>Tanggal</th><th style="text-align:right">Nominal</th><th>Admin</th><th>Aksi</th></tr></thead><tbody>' + rows + '</tbody></table><p style="text-align:right"><strong>Total: ' + rupiah(r.total) + '</strong></p>');
+}
+function editPay(id, amount, date, note) {
+  openModal('Edit Pembayaran',
+    '<form id="fE"><div class="form-grid"><label>Nominal (Rp)<input type="number" id="eA" min="1" value="' + amount + '" required></label><label>Tanggal<input type="date" id="eD" value="' + date + '" required></label></div><label>Catatan<input type="text" id="eN" maxlength="255" value="' + esc(note || '') + '"></label><button class="btn btn-primary btn-block">Simpan Perubahan</button></form>');
+  document.getElementById('fE').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const a = Number(document.getElementById('eA').value), d = document.getElementById('eD').value, n = document.getElementById('eN').value.trim();
+    const { error } = await sb.from('payments').update({ amount: a, payment_date: d, note: n || null, updated_by: ME.id }).eq('id', id);
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+    await logActivity('edit_pembayaran', 'Mengedit pembayaran menjadi ' + rupiah(a) + ' (ID #' + id + ')');
+    toast('Pembayaran diperbarui.'); closeModal(); reload();
+  });
+}
+async function delPay(id, amount, pid) {
+  const nm = DATA.find((x) => x.id === pid)?.name || '';
+  if (!confirm('Yakin hapus pembayaran ' + rupiah(amount) + ' dari ' + nm + '?')) return;
+  const { error } = await sb.from('payments').delete().eq('id', id);
+  if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+  await logActivity('hapus_pembayaran', 'Menghapus pembayaran ' + rupiah(amount) + ' milik ' + nm);
+  toast('Pembayaran dihapus.'); closeModal(); reload();
+}
+</script>
+</body>
+</html>

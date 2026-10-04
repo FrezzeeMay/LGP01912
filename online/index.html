@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KasKita — Kas Kelas & Baju Gabungan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  <div class="main" style="width:100%">
+    <header class="topbar">
+      <a class="brand" href="index.html" style="color:var(--ink)">
+        <span class="brand-mark">K</span>
+        <span class="brand-text"><strong>KasKita</strong><small style="color:var(--muted)">Sistem Kas &amp; Pembuatan Baju</small></span>
+      </a>
+      <div class="topbar-meta">
+        <span class="clock" id="clock"></span>
+        <a class="btn btn-primary btn-sm" href="login.html">Login Admin</a>
+      </div>
+    </header>
+    <main class="content" id="toasts">
+      <div id="err"></div>
+      <section class="stats" id="stats"></section>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Tabel Kas</h2><span class="spacer"></span>
+          <input type="text" id="q" placeholder="Cari nama, mis. Rayhan" style="margin:0;max-width:260px">
+          <select id="flt" style="margin:0;max-width:170px">
+            <option value="semua">Semua</option><option value="sudah">Sudah bayar</option><option value="belum">Belum bayar</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table class="grid" id="kasTable">
+          <thead><tr><th>No</th><th>Nama</th><th>Riwayat Pembayaran</th><th style="text-align:right">Total</th></tr></thead>
+          <tbody id="kasBody"><tr><td colspan="4" class="empty">Memuat…</td></tr></tbody>
+        </table></div>
+        <div class="panel-body" style="border-top:1px solid var(--line)">
+          <h2 style="margin:0">Total Keseluruhan Kas: <span style="color:var(--primary)" id="grand">…</span></h2>
+        </div>
+      </div>
+
+      <div id="bajuWrap"></div>
+    </main>
+    <footer class="foot">KasKita · Data live dari Supabase · Halaman publik (hanya melihat)</footer>
+  </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head"><h3 id="modalTitle">Detail</h3><button class="icon-btn" data-close-modal>✕</button></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+// Halaman publik: tanpa login, hanya SELECT (diizinkan policy "pub_read").
+let DATA = [];
+async function load() {
+  const { data: ps, error } = await sb.from('participants').select('*').eq('status', 'aktif').order('name');
+  if (error) { document.getElementById('err').innerHTML = '<div class="alert error">Gagal memuat data. Cek <b>js/config.js</b> (URL & anon key) dan pastikan <b>schema.sql</b> sudah dijalankan.<br><span class="small">' + esc(error.message) + '</span></div>'; return; }
+  const { data: pays } = await sb.from('payments').select('participant_id, amount, payment_date');
+  const byId = {};
+  (pays || []).forEach((p) => { (byId[p.participant_id] = byId[p.participant_id] || []).push(p); });
+  DATA = (ps || []).map((p) => {
+    const list = (byId[p.id] || []).sort((a, b) => (b.payment_date || '').localeCompare(a.payment_date || ''));
+    return { ...p, total: list.reduce((s, x) => s + x.amount, 0), n: list.length, first: list[0] || null };
+  });
+  const grand = DATA.reduce((s, x) => s + x.total, 0);
+  const sudah = DATA.filter((x) => x.n > 0).length;
+  document.getElementById('grand').textContent = rupiah(grand);
+  const { data: sp } = await sb.from('shirt_participants').select('amount_paid');
+  const dana = (sp || []).reduce((s, x) => s + x.amount_paid, 0);
+  const { data: projs } = await sb.from('shirt_projects').select('target_amount').eq('status', 'berjalan');
+  const target = (projs || []).reduce((s, x) => s + x.target_amount, 0);
+  document.getElementById('stats').innerHTML =
+    stat('Total Kas', rupiah(grand), 'seluruh transaksi') + stat('Jumlah Peserta', DATA.length + ' Orang', 'status aktif') +
+    stat('Sudah Bayar', sudah + ' Orang', 'pernah membayar') + stat('Belum Bayar', (DATA.length - sudah) + ' Orang', 'belum ada transaksi') +
+    stat('Dana Baju', rupiah(dana), 'terkumpul') + stat('Target Baju', rupiah(target), 'project berjalan');
+  render();
+  loadBaju();
+}
+function stat(l, v, s) { return '<div class="stat"><small>' + l + '</small><strong>' + esc(v) + '</strong><span>' + s + '</span></div>'; }
+function render() {
+  const q = document.getElementById('q').value.toLowerCase();
+  const f = document.getElementById('flt').value;
+  let rows = DATA.filter((r) => r.name.toLowerCase().includes(q));
+  if (f === 'sudah') rows = rows.filter((r) => r.n > 0);
+  if (f === 'belum') rows = rows.filter((r) => r.n === 0);
+  document.getElementById('kasBody').innerHTML = rows.length ? rows.map((r, i) =>
+    '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.name) + '</strong><br><span class="muted small">' + r.n + ' transaksi</span></td><td>' +
+    (r.n ? '<span class="muted small">' + tgl(r.first.payment_date) + ' ' + rupiah(r.first.amount) + (r.n > 1 ? ' <b>+' + (r.n - 1) + ' lainnya</b>' : '') + '</span><br><button class="btn btn-ghost btn-sm" onclick="historyOf(' + r.id + ',this)">Lihat Riwayat</button>' : '<span class="badge neutral">Belum bayar</span>') +
+    '</td><td class="num"><strong>' + rupiah(r.total) + '</strong></td></tr>'
+  ).join('') : '<tr><td colspan="4" class="empty">Tidak ada peserta yang cocok.</td></tr>';
+}
+async function historyOf(pid, btn) {
+  const r = DATA.find((x) => x.id === pid);
+  const { data } = await sb.from('payments').select('amount, payment_date, note, created_at, profiles!payments_created_by_fkey(display_name)').eq('participant_id', pid).order('payment_date', { ascending: false });
+  const rows = (data || []).map((x) => '<tr><td>' + tgl(x.payment_date) + '<br><span class="muted small">' + esc(x.note || '') + '</span></td><td class="num">' + rupiah(x.amount) + '</td><td>' + esc(x.profiles?.display_name || '-') + '</td></tr>').join('');
+  openModal('Riwayat Pembayaran — ' + r.name, '<table class="grid"><thead><tr><th>Tanggal</th><th style="text-align:right">Nominal</th><th>Admin</th></tr></thead><tbody>' + rows + '</tbody></table><p style="text-align:right"><strong>Total: ' + rupiah(r.total) + '</strong></p>');
+}
+async function loadBaju() {
+  const { data: projs } = await sb.from('shirt_projects').select('*').order('id', { ascending: false });
+  if (!projs?.length) return;
+  const { data: mems } = await sb.from('shirt_participants').select('project_id, size, amount_paid, status, participants(name)');
+  const wrap = document.getElementById('bajuWrap');
+  wrap.innerHTML = (projs || []).map((p) => {
+    const m = (mems || []).filter((x) => x.project_id === p.id);
+    const got = m.reduce((s, x) => s + x.amount_paid, 0);
+    const pct = p.target_amount > 0 ? Math.min(100, (got / p.target_amount) * 100) : 0;
+    const kurang = Math.max(0, p.target_amount - got);
+    const img = p.image ? '<img class="shirt-photo" src="' + esc(p.image) + '" alt="">' : '<div class="empty" style="border:1px dashed var(--line);border-radius:14px">Belum ada foto.</div>';
+    const rows = m.map((x, i) => '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(x.participants?.name || '') + '</strong></td><td>' + esc(x.size) + '</td><td class="num">' + rupiah(x.amount_paid) + '</td><td><span class="badge ' + shirtBadge(x.status) + '">' + shirtLabel(x.status) + '</span></td></tr>').join('') || '<tr><td colspan="5" class="empty">Belum ada anggota.</td></tr>';
+    return '<div class="panel"><div class="panel-head"><h2>' + esc(p.name) + '</h2></div><div class="panel-body"><div class="shirt-grid"><div>' + img + '</div><div>' +
+      '<dl class="kv"><dt>Harga / orang</dt><dd>' + rupiah(p.price_per_person) + '</dd><dt>Target</dt><dd>' + rupiah(p.target_amount) + '</dd><dt>Terkumpul</dt><dd>' + rupiah(got) + ' (' + pct.toFixed(2) + '%)</dd></dl>' +
+      '<div class="progress"><i style="width:' + pct.toFixed(2) + '%"></i></div><p>' + (kurang <= 0 && p.target_amount > 0 ? '<strong>Target tercapai!</strong>' : 'Kurang <strong>' + rupiah(kurang) + '</strong> lagi') + '</p>' +
+      '<div class="table-wrap"><table class="grid"><thead><tr><th>No</th><th>Nama</th><th>Ukuran</th><th style="text-align:right">Dibayar</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '</div></div></div></div>';
+  }).join('');
+}
+document.getElementById('q').addEventListener('input', render);
+document.getElementById('flt').addEventListener('change', render);
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — KasKita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+  <div class="scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="dashboard.html"><span class="brand-mark">K</span><span class="brand-text"><strong>KasKita</strong><small>Sistem Kas &amp; Pembuatan Baju</small></span></a>
+    <nav class="side-nav">
+      <a href="dashboard.html" class="on">Dashboard</a>
+      <a href="payments.html">Kas &amp; Pembayaran</a>
+      <a href="participants.html">Peserta</a>
+      <a href="shirts.html">Baju Gabungan</a>
+      <a href="activity.html">Aktivitas</a>
+      <a href="users.html" class="only-super">Kelola Admin</a>
+    </nav>
+    <div class="side-user">
+      <div class="avatar">A</div>
+      <div class="who"><strong data-user-name>…</strong><small><span data-user-role>…</span> · <span data-user-mail></span></small></div>
+      <button class="btn btn-ghost btn-sm" data-logout>Keluar</button>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title"><h1>Dashboard</h1><p>Ringkasan kas &amp; baju — angka dihitung otomatis.</p></div>
+      <div class="topbar-meta"><span class="role-badge" data-user-role>…</span><span class="clock" id="clock"></span></div>
+    </header>
+    <main class="content" id="toasts">
+      <section class="stats" id="stats"></section>
+      <div class="panel"><div class="panel-head"><h2>Pembayaran Terakhir</h2><span class="spacer"></span><a class="btn btn-primary btn-sm" href="payments.html">+ Tambah</a></div>
+        <div class="table-wrap"><table class="grid"><thead><tr><th>Nama</th><th>Nominal</th><th>Tanggal</th><th>Dimasukkan Oleh</th></tr></thead><tbody id="recent"><tr><td colspan="4" class="empty">Memuat…</td></tr></tbody></table></div></div>
+      <div class="panel"><div class="panel-head"><h2>Aktivitas Terakhir</h2><span class="spacer"></span><a class="btn btn-ghost btn-sm" href="activity.html">Lihat Semua</a></div>
+        <div class="table-wrap"><table class="grid"><thead><tr><th>Waktu</th><th>Admin</th><th>Aktivitas</th></tr></thead><tbody id="logs"><tr><td colspan="3" class="empty">Memuat…</td></tr></tbody></table></div></div>
+    </main>
+    <footer class="foot">KasKita · Data live dari Supabase</footer>
+  </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Detail</h3><button class="icon-btn" data-close-modal>✕</button></div><div class="modal-body" id="modalBody"></div></div></div>
+<script src="../js/config.js"></script>
+<script src="../js/app.js"></script>
+<script>
+(async () => {
+  const me = await guard(['admin', 'super_admin']);
+  if (!me) return;
+  const [ps, pays, mems, projs] = await Promise.all([
+    sb.from('participants').select('id').eq('status', 'aktif'),
+    sb.from('payments').select('participant_id, amount'),
+    sb.from('shirt_participants').select('amount_paid'),
+    sb.from('shirt_projects').select('target_amount').eq('status', 'berjalan'),
+  ]);
+  const total = (pays.data || []).reduce((s, x) => s + x.amount, 0);
+  const nP = (ps.data || []).length;
+  const sudah = new Set((pays.data || []).map((x) => x.participant_id)).size;
+  const dana = (mems.data || []).reduce((s, x) => s + x.amount_paid, 0);
+  const target = (projs.data || []).reduce((s, x) => s + x.target_amount, 0);
+  const c = (l, v, s) => '<div class="stat"><small>' + l + '</small><strong>' + v + '</strong><span>' + s + '</span></div>';
+  document.getElementById('stats').innerHTML =
+    c('Total Kas', rupiah(total), 'seluruh transaksi') + c('Jumlah Peserta', nP + ' Orang', 'aktif') +
+    c('Sudah Bayar', sudah + ' Orang', 'pernah membayar') + c('Belum Bayar', Math.max(0, nP - sudah) + ' Orang', 'belum transaksi') +
+    c('Dana Baju', rupiah(dana), 'terkumpul') + c('Target Baju', rupiah(target), 'berjalan');
+
+  const { data: rec } = await sb.from('payments').select('amount, payment_date, created_at, participants(name), profiles!payments_created_by_fkey(display_name)').order('created_at', { ascending: false }).limit(8);
+  document.getElementById('recent').innerHTML = (rec || []).map((r) =>
+    '<tr><td>' + esc(r.participants?.name || '') + '</td><td class="num">' + rupiah(r.amount) + '</td><td>' + tgl(r.payment_date) + '</td><td>' + esc(r.profiles?.display_name || '-') + '</td></tr>').join('') || '<tr><td colspan="4" class="empty">Belum ada pembayaran.</td></tr>';
+
+  const { data: lg } = await sb.from('activity_logs').select('created_at, description, profiles(display_name)').order('created_at', { ascending: false }).limit(8);
+  document.getElementById('logs').innerHTML = (lg || []).map((l) =>
+    '<tr><td style="white-space:nowrap">' + tglJam(l.created_at) + '</td><td>' + esc(l.profiles?.display_name || '-') + '</td><td>' + esc(l.description) + '</td></tr>').join('') || '<tr><td colspan="3" class="empty">Belum ada aktivitas.</td></tr>';
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Render — deploy sekali klik dari repo GitHub.
+# Cara pakai: Render Dashboard → New → Blueprint → pilih repo ini.
+services:
+  - type: web
+    name: kaskita
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    # Isi value-nya di dashboard Render (Environment), JANGAN tulis password di sini.
+    envVars:
+      - key: SUPABASE_DB_HOST
+        value: db.xxxxx.supabase.co
+      - key: SUPABASE_DB_PORT
+        value: 6543
+      - key: SUPABASE_DB_NAME
+        value: postgres
+      - key: SUPABASE_DB_USER
+        value: postgres.xxxxx
+      - key: SUPABASE_DB_PASS
+        sync: false
